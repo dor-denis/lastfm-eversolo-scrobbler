@@ -1,0 +1,14 @@
+[eversolo]
+host = "192.168.1.50"
+port = 9529
+
+[lastfm]
+api_key = "replace-me"
+api_secret = "replace-me"
+session_key = "replace-me-after-running-auth"
+
+[daemon]
+poll_interval = 2.0
+request_timeout = 5.0
+database = "/var/lib/eversolo-scrobbler/state.db"
+

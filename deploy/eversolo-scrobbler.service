@@ -1,0 +1,21 @@
+[Unit]
+Description=Eversolo Last.fm scrobbler
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=eversolo-scrobbler
+Group=eversolo-scrobbler
+ExecStart=/opt/eversolo-scrobbler/venv/bin/eversolo-scrobbler --config /etc/eversolo-scrobbler.toml
+Restart=on-failure
+RestartSec=10
+StateDirectory=eversolo-scrobbler
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+
