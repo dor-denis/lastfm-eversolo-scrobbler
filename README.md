@@ -29,6 +29,8 @@ sudo cp config.example.toml /etc/eversolo-scrobbler.toml
 sudo chmod 600 /etc/eversolo-scrobbler.toml
 ```
 
+`config.example.toml` contains placeholders and is intentionally tracked. Local runtime files named `config.toml` or `eversolo-scrobbler.toml`, `.env` files, and SQLite sidecar files are ignored by Git. Never put real Last.fm credentials into `config.example.toml` or another tracked file. Before committing, verify with `git status` that no credential-bearing file is staged.
+
 Create a Last.fm API account at [last.fm/api/account/create](https://www.last.fm/api/account/create). Put its API key and shared secret in the config temporarily, then authorize the application from an interactive shell:
 
 ```sh
@@ -37,6 +39,15 @@ Create a Last.fm API account at [last.fm/api/account/create](https://www.last.fm
 ```
 
 Open the printed URL, approve it, press Enter, then copy the resulting session key into `/etc/eversolo-scrobbler.toml`. Edit `eversolo.host` to the PLAY's static/DHCP-reserved IP. Secrets can instead be supplied through `LASTFM_API_KEY`, `LASTFM_API_SECRET`, and `LASTFM_SESSION_KEY` environment variables.
+
+For a local development configuration, copy the example to the ignored filename:
+
+```sh
+cp config.example.toml config.toml
+chmod 600 config.toml
+$EDITOR config.toml
+eversolo-scrobbler --config ./config.toml inspect
+```
 
 Before enabling the daemon, verify that this PLAY firmware exposes usable metadata:
 
@@ -54,7 +65,7 @@ sudo systemctl enable --now eversolo-scrobbler
 sudo journalctl -u eversolo-scrobbler -f
 ```
 
-For a foreground test, run `eversolo-scrobbler --config ./config.example.toml --verbose`. Stop with Ctrl-C.
+For a foreground test, run `eversolo-scrobbler --config ./config.toml --verbose`. Stop with Ctrl-C. Do not place credentials directly on a command line, because command arguments may be visible to other local users.
 
 ## Development
 
@@ -66,4 +77,3 @@ python3 -m venv .venv
 ```
 
 The daemon deliberately has one runtime dependency (`aiohttp`) and uses SQLite from the standard library, which keeps it suitable for a Raspberry Pi Zero 2 W.
-

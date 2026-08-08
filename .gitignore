@@ -1,8 +1,16 @@
 .venv/
 .idea/
+.env
+.env.*
+!.env.example
+config.toml
+eversolo-scrobbler.toml
 *.egg-info/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
 state.db
+*.db-journal
+*.db-shm
+*.db-wal
