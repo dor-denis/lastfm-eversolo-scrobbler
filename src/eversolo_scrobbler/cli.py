@@ -15,7 +15,7 @@ from .auth import authenticate
 from .config import load_config
 from .engine import ScrobbleEngine
 from .eversolo import EversoloClient, EversoloError
-from .lastfm import LastfmClient
+from .lastfm import LastfmClient, LastfmError
 from .storage import ScrobbleQueue
 
 LOG = logging.getLogger(__name__)
@@ -48,8 +48,11 @@ async def configure(path: Path, timeout: aiohttp.ClientTimeout) -> None:
     host = input("Eversolo IP address: ").strip()
     api_key = input("Last.fm API key: ").strip()
     api_secret = getpass.getpass("Last.fm shared secret: ").strip()
+    api_secret_confirmation = getpass.getpass("Confirm Last.fm shared secret: ").strip()
     if not host or not api_key or not api_secret:
         raise ValueError("IP address, API key, and shared secret are required")
+    if api_secret != api_secret_confirmation:
+        raise ValueError("shared secrets did not match; configuration was not written")
     async with aiohttp.ClientSession(timeout=timeout) as session:
         session_key = await authenticate(api_key, api_secret, session)
     contents = f"""[eversolo]
@@ -131,5 +134,5 @@ def main() -> None:
     )
     try:
         raise SystemExit(asyncio.run(run(args)))
-    except (ValueError, OSError) as exc:
+    except (ValueError, OSError, LastfmError) as exc:
         parser().error(str(exc))

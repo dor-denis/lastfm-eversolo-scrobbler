@@ -25,7 +25,7 @@ cd lastfm-eversolo-scrobbler
 sudo ./install.sh
 ```
 
-The installer asks for the Eversolo IP address, Last.fm API key, and shared secret. It prints a Last.fm approval link; open it, approve access, then press Enter. Everything else—the service user, Python environment, protected configuration, and automatic startup—is handled for you.
+The installer asks for the Eversolo IP address, Last.fm API key, and shared secret (twice to catch hidden-input typos). It prints a Last.fm approval link; open it, approve access, then press Enter. Everything else—the service user, Python environment, protected configuration, and automatic startup—is handled for you.
 
 Create an API key first at [last.fm/api/account/create](https://www.last.fm/api/account/create). After installation, use these two commands when needed:
 

@@ -37,4 +37,8 @@ async def authenticate(api_key: str, api_secret: str, session: aiohttp.ClientSes
     try:
         return str(payload["session"]["key"])
     except (KeyError, TypeError) as exc:
-        raise LastfmError(str(payload.get("message", "could not create session"))) from exc
+        code = payload.get("error")
+        message = str(payload.get("message", "could not create session"))
+        if code is not None:
+            message = f"Last.fm authentication failed (error {code}): {message}"
+        raise LastfmError(message, int(code) if code is not None else None) from exc
