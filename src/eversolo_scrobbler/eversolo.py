@@ -48,22 +48,28 @@ def _seconds(value: Any, *, allow_zero: bool = False) -> int | None:
 
 
 def parse_playback(state: dict[str, Any]) -> Playback:
-    """Translate the shapes currently used by internal, Bluetooth and Connect playback."""
+    """Translate internal-player and external-app playback response shapes."""
     raw_state = state.get("state")
     try:
         raw_state = int(raw_state)
     except (TypeError, ValueError):
         raw_state = None
     play_type = state.get("playType")
-    if play_type == 5:
+    external_info = (state.get("everSoloPlayInfo") or {}).get("everSoloPlayAudioInfo") or {}
+    external_has_track = _clean(external_info.get("artistName")) and _clean(
+        external_info.get("songName")
+    )
+    if play_type != 5 and external_has_track:
+        # Bluetooth, Connect and Android music apps use this live metadata block. The
+        # playingMusic block can remain populated with a stale internal-player track.
+        info = external_info
+        artist, title, album = info.get("artistName"), info.get("songName"), info.get("albumName")
+        mbid = track_number = None
+    elif play_type == 5:
         info = state.get("playingMusic") or {}
         artist, title, album = info.get("artist"), info.get("title"), info.get("album")
         mbid = info.get("mbid")
         track_number = info.get("trackNumber")
-    elif play_type in (4, 6):
-        info = (state.get("everSoloPlayInfo") or {}).get("everSoloPlayAudioInfo") or {}
-        artist, title, album = info.get("artistName"), info.get("songName"), info.get("albumName")
-        mbid = track_number = None
     else:
         # Some firmware omits playType but still exposes one of the known metadata blocks.
         info = state.get("playingMusic") or {}

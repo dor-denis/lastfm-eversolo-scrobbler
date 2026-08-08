@@ -40,3 +40,25 @@ def test_spotify_connect() -> None:
 
 def test_missing_metadata_is_not_a_track() -> None:
     assert parse_playback({"state": 3, "playType": 5}).track is None
+
+
+def test_apple_music_prefers_live_external_metadata_over_stale_internal_track() -> None:
+    result = parse_playback(
+        {
+            "state": 3,
+            "playType": 8,
+            "duration": 257000,
+            "position": 147087,
+            "playingMusic": {"artist": "Garbage", "title": "Milk"},
+            "everSoloPlayInfo": {
+                "everSoloPlayAudioInfo": {
+                    "artistName": "Peter Gabriel",
+                    "songName": "Kiss of Life",
+                    "albumName": "Peter Gabriel 4: Security (Remastered)",
+                }
+            },
+        }
+    )
+    assert result.track is not None
+    assert result.track.artist == "Peter Gabriel"
+    assert result.track.title == "Kiss of Life"
