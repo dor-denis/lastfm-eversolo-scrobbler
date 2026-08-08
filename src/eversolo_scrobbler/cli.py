@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import getpass
 import json
 import logging
 import os
@@ -32,8 +33,45 @@ def parser() -> argparse.ArgumentParser:
     auth = commands.add_parser("auth", help="create a Last.fm session key")
     auth.add_argument("--api-key", default=os.environ.get("LASTFM_API_KEY"))
     auth.add_argument("--api-secret", default=os.environ.get("LASTFM_API_SECRET"))
+    commands.add_parser("configure", help="interactively create a protected configuration file")
     commands.add_parser("inspect", help="print one raw Eversolo state response")
     return result
+
+
+def _toml_string(value: str) -> str:
+    """JSON strings are valid TOML basic strings and provide correct escaping."""
+    return json.dumps(value, ensure_ascii=False)
+
+
+async def configure(path: Path, timeout: aiohttp.ClientTimeout) -> None:
+    print("Eversolo Scrobbler setup\n")
+    host = input("Eversolo IP address: ").strip()
+    api_key = input("Last.fm API key: ").strip()
+    api_secret = getpass.getpass("Last.fm shared secret: ").strip()
+    if not host or not api_key or not api_secret:
+        raise ValueError("IP address, API key, and shared secret are required")
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        session_key = await authenticate(api_key, api_secret, session)
+    contents = f"""[eversolo]
+host = {_toml_string(host)}
+port = 9529
+
+[lastfm]
+api_key = {_toml_string(api_key)}
+api_secret = {_toml_string(api_secret)}
+session_key = {_toml_string(session_key)}
+
+[daemon]
+poll_interval = 2.0
+request_timeout = 5.0
+database = "/var/lib/eversolo-scrobbler/state.db"
+"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(contents, encoding="utf-8")
+    temporary.chmod(0o600)
+    temporary.replace(path)
+    print(f"\nConfiguration written to {path}")
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -46,6 +84,9 @@ async def run(args: argparse.Namespace) -> int:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             key = await authenticate(args.api_key, args.api_secret, session)
         print(f"Session key (store this securely):\n{key}")
+        return 0
+    if args.command == "configure":
+        await configure(args.config, timeout)
         return 0
 
     config = load_config(args.config)

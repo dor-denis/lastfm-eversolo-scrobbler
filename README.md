@@ -15,30 +15,30 @@ The Eversolo interface used here is the same local HTTP interface used by the co
 
 These rules follow Last.fm's [Scrobbling 2.0 guidance](https://www.last.fm/api/scrobbling).
 
-## Install and configure
+## Quick installation
 
-Raspberry Pi OS Bookworm or newer (Python 3.11+) is recommended. On the Pi:
-
-```sh
-sudo useradd --system --home /nonexistent --shell /usr/sbin/nologin eversolo-scrobbler
-sudo mkdir -p /opt/eversolo-scrobbler
-sudo chown "$USER" /opt/eversolo-scrobbler
-python3 -m venv /opt/eversolo-scrobbler/venv
-/opt/eversolo-scrobbler/venv/bin/pip install /path/to/this/repository
-sudo cp config.example.toml /etc/eversolo-scrobbler.toml
-sudo chmod 600 /etc/eversolo-scrobbler.toml
-```
-
-`config.example.toml` contains placeholders and is intentionally tracked. Local runtime files named `config.toml` or `eversolo-scrobbler.toml`, `.env` files, and SQLite sidecar files are ignored by Git. Never put real Last.fm credentials into `config.example.toml` or another tracked file. Before committing, verify with `git status` that no credential-bearing file is staged.
-
-Create a Last.fm API account at [last.fm/api/account/create](https://www.last.fm/api/account/create). Put its API key and shared secret in the config temporarily, then authorize the application from an interactive shell:
+On Raspberry Pi OS Bookworm or newer, clone the project and run the interactive installer:
 
 ```sh
-/opt/eversolo-scrobbler/venv/bin/eversolo-scrobbler auth \
-  --api-key YOUR_KEY --api-secret YOUR_SECRET
+git clone https://github.com/dor-denis/lastfm-eversolo-scrobbler.git
+cd lastfm-eversolo-scrobbler
+sudo ./install.sh
 ```
 
-Open the printed URL, approve it, press Enter, then copy the resulting session key into `/etc/eversolo-scrobbler.toml`. Edit `eversolo.host` to the PLAY's static/DHCP-reserved IP. Secrets can instead be supplied through `LASTFM_API_KEY`, `LASTFM_API_SECRET`, and `LASTFM_SESSION_KEY` environment variables.
+The installer asks for the Eversolo IP address, Last.fm API key, and shared secret. It prints a Last.fm approval link; open it, approve access, then press Enter. Everything else—the service user, Python environment, protected configuration, and automatic startup—is handled for you.
+
+Create an API key first at [last.fm/api/account/create](https://www.last.fm/api/account/create). After installation, use these two commands when needed:
+
+```sh
+sudo systemctl status eversolo-scrobbler
+sudo journalctl -u eversolo-scrobbler -f
+```
+
+After `git pull`, re-running `sudo ./install.sh` updates the application while preserving the existing configuration.
+
+## Manual/development configuration
+
+`config.example.toml` contains placeholders and is intentionally tracked. Local runtime files named `config.toml` or `eversolo-scrobbler.toml`, `.env` files, and SQLite sidecar files are ignored by Git. Never put real Last.fm credentials into `config.example.toml` or another tracked file.
 
 For a local development configuration, copy the example to the ignored filename:
 
@@ -49,21 +49,14 @@ $EDITOR config.toml
 eversolo-scrobbler --config ./config.toml inspect
 ```
 
-Before enabling the daemon, verify that this PLAY firmware exposes usable metadata:
+To inspect the raw player metadata on an installed system:
 
 ```sh
 /opt/eversolo-scrobbler/venv/bin/eversolo-scrobbler \
   --config /etc/eversolo-scrobbler.toml inspect
 ```
 
-While a track is playing, the output should contain `state: 3`, a duration in milliseconds, and either `playingMusic` or `everSoloPlayInfo` metadata. Then install the service:
-
-```sh
-sudo cp deploy/eversolo-scrobbler.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now eversolo-scrobbler
-sudo journalctl -u eversolo-scrobbler -f
-```
+While a track is playing, the output should contain `state: 3`, a duration in milliseconds, and either `playingMusic` or `everSoloPlayInfo` metadata.
 
 For a foreground test, run `eversolo-scrobbler --config ./config.toml --verbose`. Stop with Ctrl-C. Do not place credentials directly on a command line, because command arguments may be visible to other local users.
 
