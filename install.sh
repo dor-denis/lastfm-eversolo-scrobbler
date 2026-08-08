@@ -28,6 +28,9 @@ if [ ! -f "$config_file" ]; then
 else
     echo "Keeping existing configuration: $config_file"
 fi
+# Root can edit the credentials; the dedicated daemon group can only read them.
+chown root:eversolo-scrobbler "$config_file"
+chmod 0640 "$config_file"
 
 install -m 0644 "$project_dir/deploy/eversolo-scrobbler.service" "$service_file"
 systemctl daemon-reload

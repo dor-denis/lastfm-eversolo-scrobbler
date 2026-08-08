@@ -27,6 +27,8 @@ sudo ./install.sh
 
 The installer asks for the Eversolo IP address, Last.fm API key, and shared secret (twice to catch hidden-input typos). It prints a Last.fm approval link; open it, approve access, then press Enter. Everything else—the service user, Python environment, protected configuration, and automatic startup—is handled for you.
 
+The generated configuration is owned by `root:eversolo-scrobbler` with mode `0640`: root may edit it, the daemon may read it, and other users have no access.
+
 Create an API key first at [last.fm/api/account/create](https://www.last.fm/api/account/create). After installation, use these two commands when needed:
 
 ```sh
