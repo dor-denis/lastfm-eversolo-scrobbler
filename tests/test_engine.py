@@ -26,7 +26,7 @@ async def test_scrobbles_after_half_the_track(tmp_path: Path) -> None:
     await engine.observe(Playback(track, True, 25), monotonic=25, wall_time=1_025)
     await engine.observe(Playback(track, False, 25), monotonic=35, wall_time=1_035)
     await engine.observe(Playback(track, True, 50), monotonic=60, wall_time=1_060)
-    assert len(lastfm.now) == 1
+    assert len(lastfm.now) == 2
     assert [(item[0].title, item[1]) for item in lastfm.scrobbles] == [("Title", 1_000)]
 
 
@@ -47,3 +47,14 @@ async def test_position_rollback_starts_a_new_play(tmp_path: Path) -> None:
     await engine.observe(Playback(track, True, 2), monotonic=2, wall_time=1_002)
     assert len(lastfm.now) == 2
     assert engine.active is not None and engine.active.started_at == 1_000
+
+
+async def test_now_playing_gets_one_confirmation_refresh(tmp_path: Path) -> None:
+    lastfm = FakeLastfm()
+    engine = ScrobbleEngine(lastfm, ScrobbleQueue(tmp_path / "state.db"))
+    track = Track("Chelsea Wolfe", "Salt", duration=263)
+    await engine.observe(Playback(track, True, 0), monotonic=0, wall_time=1_000)
+    await engine.observe(Playback(track, True, 14), monotonic=14, wall_time=1_014)
+    await engine.observe(Playback(track, True, 16), monotonic=16, wall_time=1_016)
+    await engine.observe(Playback(track, True, 30), monotonic=30, wall_time=1_030)
+    assert lastfm.now == [track, track]

@@ -25,10 +25,13 @@ class ActiveTrack:
     last_tick: float
     last_position: float | None
     queued: bool = False
+    now_playing_refresh_at: float | None = None
 
 
 class ScrobbleEngine:
     """Track actual playing time; pauses and ordinary seeks do not inflate it."""
+
+    NOW_PLAYING_CONFIRMATION_DELAY = 15.0
 
     def __init__(self, lastfm: Submitter, queue: ScrobbleQueue) -> None:
         self.lastfm, self.queue = lastfm, queue
@@ -54,14 +57,14 @@ class ScrobbleEngine:
         )
         if track is not None and (changed or replayed):
             self.active = ActiveTrack(
-                track, int(wall - (playback.position or 0)), 0.0, now, playback.position
+                track,
+                int(wall - (playback.position or 0)),
+                0.0,
+                now,
+                playback.position,
+                now_playing_refresh_at=now + self.NOW_PLAYING_CONFIRMATION_DELAY,
             )
-            LOG.info("Now playing: %s — %s", track.artist, track.title)
-            try:
-                await self.lastfm.now_playing(track)
-            except LastfmError as exc:
-                # Last.fm explicitly says not to retry failed now-playing notifications.
-                LOG.warning("Now-playing update failed: %s", exc)
+            await self._send_now_playing(track, confirmation=False)
         elif track is None:
             self.active = None
             return
@@ -77,6 +80,15 @@ class ScrobbleEngine:
             active.listened += elapsed
         active.last_tick = now
         active.last_position = playback.position
+        if (
+            playback.playing
+            and active.now_playing_refresh_at is not None
+            and now >= active.now_playing_refresh_at
+        ):
+            # One successful confirmation refresh handles Last.fm occasionally accepting an
+            # update without making it visible. It is not an unbounded retry loop.
+            await self._send_now_playing(active.track, confirmation=True)
+            active.now_playing_refresh_at = None
         threshold = min((active.track.duration or 0) / 2, 240)
         if (
             active.track.duration
@@ -88,6 +100,16 @@ class ScrobbleEngine:
             active.queued = True
             LOG.info("Queued scrobble: %s — %s", active.track.artist, active.track.title)
         await self.flush_one()
+
+    async def _send_now_playing(self, track: Track, *, confirmation: bool) -> None:
+        try:
+            await self.lastfm.now_playing(track)
+        except LastfmError as exc:
+            # Last.fm explicitly says failed now-playing notifications should not be retried.
+            LOG.warning("Now-playing update failed: %s", exc)
+        else:
+            label = "Now-playing confirmation accepted" if confirmation else "Now playing accepted"
+            LOG.info("%s: %s — %s", label, track.artist, track.title)
 
     async def flush_one(self) -> None:
         item = self.queue.first()
