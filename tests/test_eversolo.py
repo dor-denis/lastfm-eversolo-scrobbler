@@ -62,3 +62,24 @@ def test_apple_music_prefers_live_external_metadata_over_stale_internal_track() 
     assert result.track is not None
     assert result.track.artist == "Peter Gabriel"
     assert result.track.title == "Kiss of Life"
+
+
+def test_apple_classical_never_falls_back_to_stale_internal_track() -> None:
+    result = parse_playback(
+        {
+            "state": 3,
+            "playType": 8,
+            "duration": 3559677,
+            "playingMusic": {"artist": "Garbage", "title": "Milk"},
+            "everSoloPlayInfo": {
+                "playTypePackageName": "com.apple.android.music.classical",
+                "everSoloPlayAudioInfo": {
+                    "artistName": "",
+                    "songName": "Prelude",
+                    "albumName": "The Story of Classical",
+                },
+            },
+        }
+    )
+    assert result.track is None
+    assert result.playing

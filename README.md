@@ -4,6 +4,8 @@ A small, headless Python daemon that reads playback metadata directly from an Ev
 
 The Eversolo interface used here is the same local HTTP interface used by the community [Eversolo Home Assistant integration](https://github.com/hchris1/Eversolo). It is not a published vendor SDK, so firmware changes may require parser updates. The current parser handles the internal player, Bluetooth, and Spotify Connect response shapes known to that integration.
 
+Apple Music is supported when Eversolo supplies artist and title metadata. Apple Classical currently leaves `artistName` empty on tested PLAY firmware, so those items are deliberately skipped rather than incorrectly scrobbling stale metadata from a previous playback source.
+
 ## Scrobbling behaviour
 
 - Sends `track.updateNowPlaying` when a new play is detected, followed by one confirmation refresh after 15 seconds to handle an occasionally accepted-but-not-visible Last.fm update.

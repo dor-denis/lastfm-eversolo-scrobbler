@@ -56,12 +56,11 @@ def parse_playback(state: dict[str, Any]) -> Playback:
         raw_state = None
     play_type = state.get("playType")
     external_info = (state.get("everSoloPlayInfo") or {}).get("everSoloPlayAudioInfo") or {}
-    external_has_track = _clean(external_info.get("artistName")) and _clean(
-        external_info.get("songName")
-    )
-    if play_type != 5 and external_has_track:
+    if play_type is not None and play_type != 5:
         # Bluetooth, Connect and Android music apps use this live metadata block. The
         # playingMusic block can remain populated with a stale internal-player track.
+        # Never fall back to it for an external app, even when that app omits required
+        # metadata (Apple Classical currently omits artistName on Eversolo firmware).
         info = external_info
         artist, title, album = info.get("artistName"), info.get("songName"), info.get("albumName")
         mbid = track_number = None
