@@ -44,9 +44,20 @@ async def test_position_rollback_starts_a_new_play(tmp_path: Path) -> None:
     engine = ScrobbleEngine(lastfm, ScrobbleQueue(tmp_path / "state.db"))
     track = Track("Artist", "Repeat", duration=200)
     await engine.observe(Playback(track, True, 180), monotonic=0, wall_time=1_000)
-    await engine.observe(Playback(track, True, 2), monotonic=2, wall_time=1_002)
+    await engine.observe(Playback(track, True, 190), monotonic=12, wall_time=1_012)
+    await engine.observe(Playback(track, True, 2), monotonic=14, wall_time=1_014)
     assert len(lastfm.now) == 2
-    assert engine.active is not None and engine.active.started_at == 1_000
+    assert engine.active is not None and engine.active.started_at == 1_012
+
+
+async def test_position_reset_just_after_track_change_is_not_a_replay(tmp_path: Path) -> None:
+    lastfm = FakeLastfm()
+    engine = ScrobbleEngine(lastfm, ScrobbleQueue(tmp_path / "state.db"))
+    track = Track("Fontaines D.C.", "Starburster", duration=221)
+    await engine.observe(Playback(track, True, 180), monotonic=0, wall_time=1_000)
+    await engine.observe(Playback(track, True, 2), monotonic=3, wall_time=1_003)
+    assert lastfm.now == [track]
+    assert engine.active is not None and engine.active.started_at == 1_001
 
 
 async def test_now_playing_gets_one_confirmation_refresh(tmp_path: Path) -> None:

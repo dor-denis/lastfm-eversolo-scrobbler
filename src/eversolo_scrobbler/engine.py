@@ -24,6 +24,7 @@ class ActiveTrack:
     listened: float
     last_tick: float
     last_position: float | None
+    detected_at: float
     queued: bool = False
     now_playing_refresh_at: float | None = None
 
@@ -32,6 +33,7 @@ class ScrobbleEngine:
     """Track actual playing time; pauses and ordinary seeks do not inflate it."""
 
     NOW_PLAYING_CONFIRMATION_DELAY = 15.0
+    REPLAY_DETECTION_GRACE = 10.0
 
     def __init__(self, lastfm: Submitter, queue: ScrobbleQueue) -> None:
         self.lastfm, self.queue = lastfm, queue
@@ -43,7 +45,7 @@ class ScrobbleEngine:
         now = time.monotonic() if monotonic is None else monotonic
         wall = time.time() if wall_time is None else wall_time
         track = playback.track
-        replayed = bool(
+        position_rolled_back = bool(
             track
             and self.active
             and track.identity == self.active.track.identity
@@ -51,6 +53,11 @@ class ScrobbleEngine:
             and playback.position is not None
             and self.active.last_position is not None
             and playback.position + 5 < self.active.last_position
+        )
+        replayed = bool(
+            position_rolled_back
+            and self.active
+            and now - self.active.detected_at >= self.REPLAY_DETECTION_GRACE
         )
         changed = (
             track is None or self.active is None or track.identity != self.active.track.identity
@@ -62,6 +69,7 @@ class ScrobbleEngine:
                 0.0,
                 now,
                 playback.position,
+                now,
                 now_playing_refresh_at=now + self.NOW_PLAYING_CONFIRMATION_DELAY,
             )
             await self._send_now_playing(track, confirmation=False)
@@ -75,6 +83,10 @@ class ScrobbleEngine:
         active = self.active
         if active is None:
             return
+        if position_rolled_back and not replayed and playback.position is not None:
+            # Eversolo can publish new metadata one poll before resetting the old track's
+            # position. Correct the start timestamp without treating this as a replay.
+            active.started_at = int(wall - playback.position)
         elapsed = max(0.0, min(now - active.last_tick, 30.0))
         if playback.playing:
             active.listened += elapsed
