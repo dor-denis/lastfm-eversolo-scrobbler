@@ -83,3 +83,25 @@ def test_apple_classical_never_falls_back_to_stale_internal_track() -> None:
     )
     assert result.track is None
     assert result.playing
+
+
+def test_tidal_connect_uses_source_play_status_when_global_state_is_wrong() -> None:
+    result = parse_playback(
+        {
+            "state": 4,
+            "playType": 6,
+            "position": 37580,
+            "duration": 272000,
+            "everSoloPlayInfo": {
+                "playStatus": 2,
+                "everSoloPlayAudioInfo": {
+                    "artistName": "Water From Your Eyes",
+                    "songName": "Life Signs",
+                    "albumName": "It's a Beautiful Place",
+                },
+            },
+        }
+    )
+    assert result.track is not None
+    assert result.track.title == "Life Signs"
+    assert result.playing

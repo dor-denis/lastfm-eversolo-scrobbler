@@ -86,4 +86,14 @@ def parse_playback(state: dict[str, Any]) -> Playback:
             artist, title, album, _seconds(state.get("duration")), parsed_number, _clean(mbid)
         )
     position = _seconds(state.get("position"), allow_zero=True)
-    return Playback(track=track, playing=raw_state == 3, position=position, raw_state=raw_state)
+    external_play_status = (state.get("everSoloPlayInfo") or {}).get("playStatus")
+    # Connect playback on tested PLAY firmware reports global state=4 (normally paused)
+    # even while its position advances. For playType 6, playStatus=2 is the reliable
+    # source-specific playing signal.
+    connect_playing = play_type == 6 and external_play_status == 2
+    return Playback(
+        track=track,
+        playing=raw_state == 3 or connect_playing,
+        position=position,
+        raw_state=raw_state,
+    )
