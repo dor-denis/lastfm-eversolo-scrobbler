@@ -16,6 +16,30 @@ class ScrobbleQueue:
             "id INTEGER PRIMARY KEY, started_at INTEGER NOT NULL, track TEXT NOT NULL, "
             "created_at INTEGER NOT NULL DEFAULT (unixepoch()))"
         )
+        self.connection.execute(
+            "CREATE TABLE IF NOT EXISTS submitted ("
+            "artist_key TEXT NOT NULL, title_key TEXT NOT NULL, "
+            "submitted_at INTEGER NOT NULL DEFAULT (unixepoch()), "
+            "PRIMARY KEY (artist_key, title_key))"
+        )
+        self.connection.commit()
+
+    @staticmethod
+    def _identity(track: Track) -> tuple[str, str]:
+        return track.artist.strip().casefold(), track.title.strip().casefold()
+
+    def was_submitted(self, track: Track) -> bool:
+        row = self.connection.execute(
+            "SELECT 1 FROM submitted WHERE artist_key = ? AND title_key = ?",
+            self._identity(track),
+        ).fetchone()
+        return row is not None
+
+    def mark_submitted(self, track: Track) -> None:
+        self.connection.execute(
+            "INSERT OR IGNORE INTO submitted(artist_key, title_key) VALUES (?, ?)",
+            self._identity(track),
+        )
         self.connection.commit()
 
     def add(self, track: Track, started_at: int) -> None:

@@ -69,3 +69,41 @@ async def test_now_playing_gets_one_confirmation_refresh(tmp_path: Path) -> None
     await engine.observe(Playback(track, True, 16), monotonic=16, wall_time=1_016)
     await engine.observe(Playback(track, True, 30), monotonic=30, wall_time=1_030)
     assert lastfm.now == [track, track]
+
+
+async def test_successful_song_is_never_scrobbled_twice_even_after_restart(tmp_path: Path) -> None:
+    database = tmp_path / "state.db"
+    lastfm = FakeLastfm()
+    first_queue = ScrobbleQueue(database)
+    first = ScrobbleEngine(lastfm, first_queue)
+    track = Track("King Gizzard & The Lizard Wizard", "Uqt", "Album One", duration=100)
+    await first.observe(Playback(track, True, 0), monotonic=0, wall_time=1_000)
+    await first.observe(Playback(track, True, 25), monotonic=25, wall_time=1_025)
+    await first.observe(Playback(track, True, 50), monotonic=50, wall_time=1_050)
+    first_queue.close()
+
+    second_queue = ScrobbleQueue(database)
+    second = ScrobbleEngine(lastfm, second_queue)
+    same_song_different_case_and_album = Track(
+        " king gizzard & the lizard wizard ", "UQT", "Album Two", duration=100
+    )
+    await second.observe(
+        Playback(same_song_different_case_and_album, True, 0),
+        monotonic=100,
+        wall_time=2_000,
+    )
+    await second.observe(
+        Playback(same_song_different_case_and_album, True, 25),
+        monotonic=125,
+        wall_time=2_025,
+    )
+    await second.observe(
+        Playback(same_song_different_case_and_album, True, 50),
+        monotonic=150,
+        wall_time=2_050,
+    )
+
+    assert [(track.artist, track.title) for track, _ in lastfm.scrobbles] == [
+        ("King Gizzard & The Lizard Wizard", "Uqt")
+    ]
+    assert second_queue.first() is None

@@ -108,9 +108,16 @@ class ScrobbleEngine:
             and active.listened >= threshold
             and not active.queued
         ):
-            self.queue.add(active.track, active.started_at)
             active.queued = True
-            LOG.info("Queued scrobble: %s — %s", active.track.artist, active.track.title)
+            if self.queue.was_submitted(active.track):
+                LOG.info(
+                    "Suppressed duplicate scrobble: %s — %s",
+                    active.track.artist,
+                    active.track.title,
+                )
+            else:
+                self.queue.add(active.track, active.started_at)
+                LOG.info("Queued scrobble: %s — %s", active.track.artist, active.track.title)
         await self.flush_one()
 
     async def _send_now_playing(self, track: Track, *, confirmation: bool) -> None:
@@ -139,5 +146,6 @@ class ScrobbleEngine:
             else:
                 LOG.warning("Scrobble deferred: %s", exc)
         else:
+            self.queue.mark_submitted(track)
             self.queue.remove(item_id)
             LOG.info("Scrobbled: %s — %s", track.artist, track.title)

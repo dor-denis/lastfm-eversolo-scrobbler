@@ -13,6 +13,7 @@ Apple Music and Tidal Connect are supported when Eversolo supplies artist and ti
 - Counts elapsed playing time rather than trusting the seek position, so pauses and forward seeks do not create false scrobbles.
 - Detects replay of the same track when its position moves backwards.
 - Stores eligible submissions in SQLite before sending. Pending submissions survive restarts and temporary Last.fm/network failures.
+- Permanently suppresses repeat scrobbles of the same normalized artist and title, including after daemon restarts. This deliberately excludes legitimate repeat listens.
 - Does not retry failed now-playing updates, and only retries Last.fm error codes documented as temporary.
 
 These rules follow Last.fm's [Scrobbling 2.0 guidance](https://www.last.fm/api/scrobbling).
