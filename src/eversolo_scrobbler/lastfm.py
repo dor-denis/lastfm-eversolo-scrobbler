@@ -43,6 +43,8 @@ class LastfmClient:
                 payload = await response.json(content_type=None)
                 if response.status >= 500:
                     raise LastfmError(f"Last.fm HTTP {response.status}", retryable=True)
+        except TimeoutError as exc:
+            raise LastfmError("Last.fm request timed out", retryable=True) from exc
         except (aiohttp.ClientError, ValueError) as exc:
             raise LastfmError(f"Last.fm request failed: {exc}", retryable=True) from exc
         if "error" in payload:

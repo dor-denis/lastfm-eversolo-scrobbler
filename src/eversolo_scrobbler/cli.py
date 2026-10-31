@@ -134,5 +134,8 @@ def main() -> None:
     )
     try:
         raise SystemExit(asyncio.run(run(args)))
-    except (ValueError, OSError, LastfmError) as exc:
+    except ValueError as exc:
         parser().error(str(exc))
+    except (OSError, LastfmError) as exc:
+        LOG.error("%s: %s", type(exc).__name__, str(exc) or "operation failed")
+        raise SystemExit(1) from exc

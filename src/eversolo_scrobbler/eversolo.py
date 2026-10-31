@@ -23,6 +23,8 @@ class EversoloClient:
             async with self.session.get(self.url) as response:
                 response.raise_for_status()
                 payload = await response.json(content_type=None)
+        except TimeoutError as exc:
+            raise EversoloError("Eversolo request timed out") from exc
         except (aiohttp.ClientError, ValueError) as exc:
             raise EversoloError(str(exc)) from exc
         if not isinstance(payload, dict):
