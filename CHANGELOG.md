@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.2
+
+- Ignore stale track metadata while Eversolo is stopped or paused instead of
+  sending it to Last.fm as now playing. Start tracking only when playback begins.
+- Exclude paused time when playback resumes and require the playing state before
+  queuing a new scrobble. Previously eligible pending scrobbles still retry.
+
+Validation: 27 tests pass. Verified on the Raspberry Pi against Eversolo's live
+stopped response with retained track metadata, using a fake Last.fm client.
+
 ## 0.1.1
 
 - Fix repeat listens being permanently suppressed after a song's first scrobble.

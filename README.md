@@ -8,9 +8,9 @@ Apple Music and Tidal Connect are supported when Eversolo supplies artist and ti
 
 ## Scrobbling behaviour
 
-- Sends `track.updateNowPlaying` when a new play is detected, followed by one confirmation refresh after 15 seconds to handle an occasionally accepted-but-not-visible Last.fm update.
+- Sends `track.updateNowPlaying` when a new play is detected in the playing state, followed by one confirmation refresh after 15 seconds to handle an occasionally accepted-but-not-visible Last.fm update. Stopped or paused metadata never starts a play.
 - Scrobbles only tracks longer than 30 seconds, after listening to half the track or four minutes, whichever comes first.
-- Counts elapsed playing time rather than trusting the seek position, so pauses and forward seeks do not create false scrobbles.
+- Counts elapsed time only between playing observations rather than trusting the seek position, so pauses, resume transitions, and forward seeks do not create false scrobbles.
 - Detects replay of the same track when its position moves backwards.
 - Stores eligible submissions in SQLite before sending. Pending submissions survive restarts and temporary Last.fm/network failures.
 - Queues each detected play once. Listening to the same song again can produce a new scrobble, including after daemon restarts. Existing databases remain compatible; the old permanent song-suppression history is ignored.

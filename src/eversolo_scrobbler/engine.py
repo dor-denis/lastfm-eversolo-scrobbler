@@ -25,6 +25,7 @@ class ActiveTrack:
     last_tick: float
     last_position: float | None
     detected_at: float
+    was_playing: bool = True
     queued: bool = False
     now_playing_refresh_at: float | None = None
 
@@ -62,7 +63,13 @@ class ScrobbleEngine:
         changed = (
             track is None or self.active is None or track.identity != self.active.track.identity
         )
-        if track is not None and (changed or replayed):
+        if track is None or (changed and not playback.playing):
+            # Eversolo retains old metadata when stopped or switching sources.
+            # Metadata alone must not start a play or publish a now-playing update.
+            self.active = None
+            await self.flush_one()
+            return
+        if changed or replayed:
             self.active = ActiveTrack(
                 track,
                 int(wall - (playback.position or 0)),
@@ -73,9 +80,6 @@ class ScrobbleEngine:
                 now_playing_refresh_at=now + self.NOW_PLAYING_CONFIRMATION_DELAY,
             )
             await self._send_now_playing(track, confirmation=False)
-        elif track is None:
-            self.active = None
-            return
         elif self.active is not None:
             # Metadata fields sometimes arrive over several polls. Keep the richer latest value.
             self.active.track = track
@@ -88,8 +92,9 @@ class ScrobbleEngine:
             # position. Correct the start timestamp without treating this as a replay.
             active.started_at = int(wall - playback.position)
         elapsed = max(0.0, min(now - active.last_tick, 30.0))
-        if playback.playing:
+        if playback.playing and active.was_playing:
             active.listened += elapsed
+        active.was_playing = playback.playing
         active.last_tick = now
         active.last_position = playback.position
         if (
@@ -103,7 +108,8 @@ class ScrobbleEngine:
             active.now_playing_refresh_at = None
         threshold = min((active.track.duration or 0) / 2, 240)
         if (
-            active.track.duration
+            playback.playing
+            and active.track.duration
             and active.track.duration > 30
             and active.listened >= threshold
             and not active.queued
